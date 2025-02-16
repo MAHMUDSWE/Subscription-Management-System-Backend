@@ -1,37 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Organization } from '../../entities/organization.entity';
-import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { User } from '../../entities/user.entity';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { OrganizationRepository } from './repositories/organization.repository';
 
 @Injectable()
 export class OrganizationsService {
   constructor(
-    @InjectRepository(Organization)
-    private readonly organizationRepository: Repository<Organization>,
-  ) {}
+    private readonly organizationRepository: OrganizationRepository,
+  ) { }
 
   async create(createOrganizationDto: CreateOrganizationDto, owner: User): Promise<Organization> {
-    const organization = this.organizationRepository.create({
+    return this.organizationRepository.createOrganization({
       ...createOrganizationDto,
       owner,
     });
-
-    return this.organizationRepository.save(organization);
   }
 
   async findAll(): Promise<Organization[]> {
-    return this.organizationRepository.find({
-      relations: ['owner', 'subscriptions'],
-    });
+    return this.organizationRepository.findAllOrganizations();
   }
 
   async findOne(id: string): Promise<Organization> {
-    const organization = await this.organizationRepository.findOne({
-      where: { id },
-      relations: ['owner', 'subscriptions'],
-    });
+    const organization = await this.organizationRepository.findOrganizationById(id);
 
     if (!organization) {
       throw new NotFoundException('Organization not found');
@@ -41,9 +32,6 @@ export class OrganizationsService {
   }
 
   async findByOwner(ownerId: string): Promise<Organization[]> {
-    return this.organizationRepository.find({
-      where: { owner: { id: ownerId } },
-      relations: ['subscriptions'],
-    });
+    return this.organizationRepository.findOrganizationsByOwner(ownerId);
   }
 }
