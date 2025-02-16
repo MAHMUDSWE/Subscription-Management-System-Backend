@@ -12,6 +12,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { UsersModule } from './modules/users/users.module';
+import { WebsocketsModule } from './modules/websockets/websockets.module';
 
 const REQUEST_ID_HEADER = 'x-request-id';
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -60,6 +61,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
     PaymentsModule,
     ActivityModule,
     NotificationsModule,
+    WebsocketsModule,
     HealthModule,
   ],
   controllers: [],
