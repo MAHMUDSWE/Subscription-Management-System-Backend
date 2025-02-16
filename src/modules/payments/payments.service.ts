@@ -1,42 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Payment, PaymentStatus } from '../../entities/payment.entity';
-import { CreatePaymentDto } from './dto/create-payment.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PaymentRepository } from './repositories/payment.repository';
 
 @Injectable()
 export class PaymentsService {
   constructor(
-    @InjectRepository(Payment)
-    private readonly paymentRepository: Repository<Payment>,
+    private readonly paymentRepository: PaymentRepository,
     private readonly subscriptionsService: SubscriptionsService,
-  ) {}
+  ) { }
 
   async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
     const subscription = await this.subscriptionsService.findOne(createPaymentDto.subscriptionId);
-    
-    const payment = this.paymentRepository.create({
+
+    return this.paymentRepository.createPayment({
       subscription,
       amount: createPaymentDto.amount,
       method: createPaymentDto.method,
       status: PaymentStatus.PENDING,
     });
-
-    return this.paymentRepository.save(payment);
   }
 
   async findAll(): Promise<Payment[]> {
-    return this.paymentRepository.find({
-      relations: ['subscription', 'subscription.user', 'subscription.organization'],
-    });
+    return this.paymentRepository.findAllPayments();
   }
 
   async findOne(id: string): Promise<Payment> {
-    const payment = await this.paymentRepository.findOne({
-      where: { id },
-      relations: ['subscription', 'subscription.user', 'subscription.organization'],
-    });
+    const payment = await this.paymentRepository.findPaymentById(id);
 
     if (!payment) {
       throw new NotFoundException('Payment not found');
@@ -46,8 +37,6 @@ export class PaymentsService {
   }
 
   async findBySubscription(subscriptionId: string): Promise<Payment[]> {
-    return this.paymentRepository.find({
-      where: { subscription: { id: subscriptionId } },
-    });
+    return this.paymentRepository.findPaymentsBySubscription(subscriptionId);
   }
 }
