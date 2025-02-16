@@ -7,6 +7,7 @@ import { getDatabaseConfig } from './config/database.config';
 import { ActivityModule } from './modules/activity/activity.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
@@ -58,6 +59,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
     SubscriptionsModule,
     PaymentsModule,
     ActivityModule,
+    NotificationsModule,
     HealthModule,
   ],
   controllers: [],
