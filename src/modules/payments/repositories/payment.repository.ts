@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import { Payment } from '../../../entities/payment.entity';
+import { DataSource } from 'typeorm';
+import { BaseRepository } from '../../../common/repositories/base.repository';
+import { Payment, PaymentStatus } from '../../../entities/payment.entity';
 
 @Injectable()
-export class PaymentRepository extends Repository<Payment> {
+export class PaymentRepository extends BaseRepository<Payment> {
     constructor(private dataSource: DataSource) {
         super(Payment, dataSource.createEntityManager());
     }
@@ -29,6 +30,11 @@ export class PaymentRepository extends Repository<Payment> {
     async findPaymentsBySubscription(subscriptionId: string): Promise<Payment[]> {
         return this.find({
             where: { subscription: { id: subscriptionId } },
+            relations: ['subscription'],
         });
+    }
+
+    async updatePaymentStatus(id: string, status: PaymentStatus): Promise<void> {
+        await this.update(id, { status });
     }
 }
