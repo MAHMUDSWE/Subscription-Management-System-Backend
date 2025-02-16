@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { v4 as uuid } from 'uuid';
 import { getDatabaseConfig } from './config/database.config';
+import { ActivityModule } from './modules/activity/activity.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
@@ -56,6 +57,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
     OrganizationsModule,
     SubscriptionsModule,
     PaymentsModule,
+    ActivityModule,
     HealthModule,
   ],
   controllers: [],
