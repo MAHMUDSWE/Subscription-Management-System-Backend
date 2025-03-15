@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ActivityLog, ActivityType } from '../../entities/activity-log.entity';
+import { ActivityType } from '../../entities/activity-log.entity';
 import { User } from '../../entities/user.entity';
+import { ActivityRepository } from './repositories/activity.repository';
 
 @Injectable()
 export class ActivityService {
-    constructor(
-        @InjectRepository(ActivityLog)
-        private activityLogRepository: Repository<ActivityLog>,
-    ) { }
+    constructor(private readonly activityRepository: ActivityRepository) { }
 
     async logActivity(
         type: ActivityType,
@@ -19,27 +15,20 @@ export class ActivityService {
         entityType?: string,
         description?: string,
     ) {
-        const activityLog = this.activityLogRepository.create({
+        return this.activityRepository.createActivityLog(
             type,
             user,
             metadata,
             entityId,
             entityType,
             description,
-        });
-
-        return this.activityLogRepository.save(activityLog);
+        );
     }
 
     async getActivityLogs(userId?: string) {
-        const query = this.activityLogRepository.createQueryBuilder('activity')
-            .leftJoinAndSelect('activity.user', 'user')
-            .orderBy('activity.createdAt', 'DESC');
-
         if (userId) {
-            query.where('user.id = :userId', { userId });
+            return this.activityRepository.findUserActivityLogs(userId);
         }
-
-        return query.getMany();
+        return this.activityRepository.findAllActivityLogs();
     }
 }
