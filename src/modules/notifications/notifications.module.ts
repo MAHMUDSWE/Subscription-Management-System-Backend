@@ -4,6 +4,7 @@ import { Notification } from '../../entities/notification.entity';
 import { WebsocketsModule } from '../websockets/websockets.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
+import { NotificationRepository } from './repositories/notification.repository';
 
 @Module({
     imports: [
@@ -11,7 +12,7 @@ import { NotificationsService } from './notifications.service';
         WebsocketsModule,
     ],
     controllers: [NotificationsController],
-    providers: [NotificationsService],
+    providers: [NotificationsService, NotificationRepository],
     exports: [NotificationsService],
 })
 export class NotificationsModule { }

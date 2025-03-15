@@ -1,19 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import { createTransport } from 'nodemailer';
-import { Repository } from 'typeorm';
-import { Notification, NotificationType } from '../../entities/notification.entity';
+import { NotificationType } from '../../entities/notification.entity';
 import { User } from '../../entities/user.entity';
 import { EventsGateway } from '../websockets/events.gateway';
+import { NotificationRepository } from './repositories/notification.repository';
 
 @Injectable()
 export class NotificationsService {
     private readonly transporter;
 
     constructor(
-        @InjectRepository(Notification)
-        private notificationRepository: Repository<Notification>,
+        private readonly notificationRepository: NotificationRepository,
         private readonly eventsGateway: EventsGateway,
         private readonly configService: ConfigService,
     ) {
@@ -34,14 +32,12 @@ export class NotificationsService {
         message: string,
         sendEmail: boolean = false,
     ) {
-        const notification = this.notificationRepository.create({
+        const notification = await this.notificationRepository.createNotification(
             user,
             type,
             title,
             message,
-        });
-
-        await this.notificationRepository.save(notification);
+        );
 
         // Send real-time notification via WebSocket
         this.eventsGateway.server.to(user.id).emit('notification', notification);
@@ -64,13 +60,10 @@ export class NotificationsService {
     }
 
     async getUserNotifications(userId: string) {
-        return this.notificationRepository.find({
-            where: { user: { id: userId } },
-            order: { createdAt: 'DESC' },
-        });
+        return this.notificationRepository.findUserNotifications(userId);
     }
 
     async markAsRead(notificationId: string) {
-        await this.notificationRepository.update(notificationId, { read: true });
+        await this.notificationRepository.markAsRead(notificationId);
     }
 }
