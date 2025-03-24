@@ -23,9 +23,12 @@ services:
       - SMTP_USER=test
       - SMTP_PASS=test
       - SMTP_FROM=noreply@example.com
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       - postgres
       - mailhog
+      - redis
 
   postgres:
     image: postgres:15-alpine
@@ -44,5 +47,13 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
+  redis_data:

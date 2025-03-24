@@ -1,9 +1,12 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { Logger, Module, OnApplicationShutdown, OnModuleDestroy } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { v4 as uuid } from 'uuid';
 import { getDatabaseConfig } from './config/database.config';
+import { getRedisConfig } from './config/redis.config';
 import { ActivityModule } from './modules/activity/activity.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -27,6 +30,16 @@ const IS_PROD = process.env.NODE_ENV === 'production';
       useFactory: getDatabaseConfig,
       inject: [ConfigService],
     }),
+    // CacheModule.registerAsync({
+    //   imports: [ConfigModule],
+    //   useFactory: getRedisConfig,
+    //   inject: [ConfigService],
+    //   isGlobal: true,
+    // }),
+    ThrottlerModule.forRoot([{
+      ttl: 60,
+      limit: 10,
+    }]),
     LoggerModule.forRoot({
       pinoHttp: {
         level: IS_PROD ? 'info' : 'debug',
