@@ -15,13 +15,18 @@ export class SubscriptionsService {
   async create(createSubscriptionDto: CreateSubscriptionDto, user: User): Promise<Subscription> {
     const organization = await this.organizationsService.findOne(createSubscriptionDto.organizationId);
 
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+
     return this.subscriptionRepository.createSubscription({
       user,
       organization,
       amount: createSubscriptionDto.amount,
       status: SubscriptionStatus.PENDING,
-      startDate: new Date(),
-      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      startDate,
+      endDate,
+      autoRenew: false,
     });
   }
 
@@ -45,5 +50,28 @@ export class SubscriptionsService {
 
   async findByOrganization(organizationId: string): Promise<Subscription[]> {
     return this.subscriptionRepository.findSubscriptionsByOrganization(organizationId);
+  }
+
+  async findExpiringSubscriptions(endDate: Date): Promise<Subscription[]> {
+    return this.subscriptionRepository.findExpiringSubscriptions(endDate);
+  }
+
+  async updateStatus(id: string, status: SubscriptionStatus): Promise<void> {
+    const subscription = await this.findOne(id);
+    await this.subscriptionRepository.update(id, { status });
+  }
+
+  async toggleAutoRenew(id: string): Promise<Subscription> {
+    const subscription = await this.findOne(id);
+    subscription.autoRenew = !subscription.autoRenew;
+    return this.subscriptionRepository.save(subscription);
+  }
+
+  async extend(id: string, months: number): Promise<Subscription> {
+    const subscription = await this.findOne(id);
+    const newEndDate = new Date(subscription.endDate);
+    newEndDate.setMonth(newEndDate.getMonth() + months);
+    subscription.endDate = newEndDate;
+    return this.subscriptionRepository.save(subscription);
   }
 }

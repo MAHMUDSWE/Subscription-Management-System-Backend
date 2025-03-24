@@ -1,15 +1,15 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   ManyToOne,
   OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { User } from './user.entity';
 import { Organization } from './organization.entity';
 import { Payment } from './payment.entity';
+import { User } from './user.entity';
 
 export enum SubscriptionStatus {
   PENDING = 'pending',
@@ -44,6 +44,9 @@ export class Subscription {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
+
+  @Column({ default: false })
+  autoRenew: boolean;
 
   @OneToMany(() => Payment, (payment) => payment.subscription)
   payments: Payment[];

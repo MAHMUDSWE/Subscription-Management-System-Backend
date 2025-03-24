@@ -37,4 +37,24 @@ export class PaymentRepository extends BaseRepository<Payment> {
     async updatePaymentStatus(id: string, status: PaymentStatus): Promise<void> {
         await this.update(id, { status });
     }
+
+    async findPaymentByTransactionId(transactionId: string): Promise<Payment | null> {
+        return this.findOne({ where: { transactionId } });
+    }
+
+    async findPendingPayments(): Promise<Payment[]> {
+        return this.find({ where: { status: PaymentStatus.PENDING } });
+    }
+
+    async findFailedPayments(): Promise<Payment[]> {
+        return this.find({ where: { status: PaymentStatus.FAILED } });
+    }
+
+    async findCompletedPayments(): Promise<Payment[]> {
+        return this.find({ where: { status: PaymentStatus.COMPLETED } });
+    }
+
+    async findPaymentsByStatus(status: PaymentStatus): Promise<Payment[]> {
+        return this.find({ where: { status } });
+    }
 }

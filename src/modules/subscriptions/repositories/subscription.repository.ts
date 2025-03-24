@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import { Subscription } from '../../../entities/subscription.entity';
+import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
+import { Subscription, SubscriptionStatus } from '../../../entities/subscription.entity';
 
 @Injectable()
 export class SubscriptionRepository extends Repository<Subscription> {
@@ -37,6 +37,16 @@ export class SubscriptionRepository extends Repository<Subscription> {
         return this.find({
             where: { organization: { id: organizationId } },
             relations: ['user', 'payments'],
+        });
+    }
+
+    async findExpiringSubscriptions(endDate: Date): Promise<Subscription[]> {
+        return this.find({
+            where: {
+                status: SubscriptionStatus.ACTIVE,
+                endDate: LessThanOrEqual(endDate),
+            },
+            relations: ['user', 'organization'],
         });
     }
 }

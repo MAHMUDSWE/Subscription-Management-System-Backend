@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { SubscriptionStatus } from 'src/entities/subscription.entity';
 import { Payment, PaymentStatus } from '../../entities/payment.entity';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -40,12 +41,13 @@ export class PaymentsService {
     );
 
     if (result.success) {
-      await this.paymentRepository.updatePaymentStatus(payment.id, PaymentStatus.COMPLETED);
+      await this.updateStatus(payment.id, PaymentStatus.COMPLETED);
       payment.status = PaymentStatus.COMPLETED;
       payment.transactionId = result.transactionId;
       payment.paymentDetails = result.metadata;
+      await this.subscriptionsService.updateStatus(payment.subscription.id, SubscriptionStatus.ACTIVE);
     } else {
-      await this.paymentRepository.updatePaymentStatus(payment.id, PaymentStatus.FAILED);
+      await this.updateStatus(payment.id, PaymentStatus.FAILED);
       payment.status = PaymentStatus.FAILED;
     }
 
@@ -66,5 +68,17 @@ export class PaymentsService {
 
   async findBySubscription(subscriptionId: string): Promise<Payment[]> {
     return this.paymentRepository.findPaymentsBySubscription(subscriptionId);
+  }
+
+  async updateStatus(id: string, status: PaymentStatus): Promise<void> {
+    await this.paymentRepository.updatePaymentStatus(id, status);
+  }
+
+  async findByTransactionId(transactionId: string): Promise<Payment | null> {
+    return this.paymentRepository.findPaymentByTransactionId(transactionId);
+  }
+
+  async findByStatus(status: PaymentStatus): Promise<Payment[]> {
+    return this.paymentRepository.findPaymentsByStatus(status);
   }
 }
