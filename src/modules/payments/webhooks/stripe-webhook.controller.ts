@@ -1,11 +1,13 @@
 import { Controller, Headers, Post, RawBodyRequest, Req } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import Stripe from 'stripe';
 import { NotificationType } from '../../../entities/notification.entity';
 import { PaymentStatus } from '../../../entities/payment.entity';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PaymentsService } from '../payments.service';
 
+@ApiTags('webhooks')
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
     private readonly stripe: Stripe;

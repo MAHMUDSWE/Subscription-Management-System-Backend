@@ -1,8 +1,11 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ApiVersionGuard } from './common/guards/api-version.guard';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
+import { CustomMetrics } from './modules/health/metrics/custom.metrics';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,7 +14,7 @@ async function bootstrap() {
   app.enableCors({
     origin: ['http://localhost:3000', 'https://yourdomain.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'api-version'],
   });
 
   app.useGlobalPipes(
@@ -33,6 +36,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalGuards(new ApiVersionGuard(app.get(Reflector)));
+  app.useGlobalInterceptors(new MetricsInterceptor(app.get(CustomMetrics)));
 
   app.enableShutdownHooks();
 
