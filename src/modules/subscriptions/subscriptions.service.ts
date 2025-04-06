@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PaginatedResponse, PaginationDto } from '../../common/dtos/pagination.dto';
+import { NotificationType } from '../../entities/notification.entity';
 import { Subscription, SubscriptionStatus } from '../../entities/subscription.entity';
 import { User } from '../../entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { SubscriptionRepository } from './repositories/subscription.repository';
 
@@ -10,6 +14,7 @@ export class SubscriptionsService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly organizationsService: OrganizationsService,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   async create(createSubscriptionDto: CreateSubscriptionDto, user: User): Promise<Subscription> {
@@ -19,7 +24,7 @@ export class SubscriptionsService {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 1);
 
-    return this.subscriptionRepository.createSubscription({
+    const subscription = await this.subscriptionRepository.createSubscription({
       user,
       organization,
       amount: createSubscriptionDto.amount,
@@ -28,10 +33,34 @@ export class SubscriptionsService {
       endDate,
       autoRenew: false,
     });
+
+    await this.notificationsService.createNotification(
+      user,
+      NotificationType.SUBSCRIPTION_ACTIVATED,
+      'Subscription Created',
+      `Your subscription to ${organization.name} has been created and is pending payment.`,
+      true
+    );
+
+    return subscription;
   }
 
-  async findAll(): Promise<Subscription[]> {
-    return this.subscriptionRepository.findAllSubscriptions();
+  async findAll(paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      skip: (paginationDto.page - 1) * paginationDto.limit,
+      take: paginationDto.limit,
+      relations: ['user', 'organization', 'payments'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      items,
+      meta: {
+        total,
+        page: paginationDto.page,
+        lastPage: Math.ceil(total / paginationDto.limit),
+      },
+    };
   }
 
   async findOne(id: string): Promise<Subscription> {
@@ -44,12 +73,42 @@ export class SubscriptionsService {
     return subscription;
   }
 
-  async findByUser(userId: string): Promise<Subscription[]> {
-    return this.subscriptionRepository.findSubscriptionsByUser(userId);
+  async findByUser(userId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      where: { user: { id: userId } },
+      skip: (paginationDto.page - 1) * paginationDto.limit,
+      take: paginationDto.limit,
+      relations: ['organization', 'payments'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      items,
+      meta: {
+        total,
+        page: paginationDto.page,
+        lastPage: Math.ceil(total / paginationDto.limit),
+      },
+    };
   }
 
-  async findByOrganization(organizationId: string): Promise<Subscription[]> {
-    return this.subscriptionRepository.findSubscriptionsByOrganization(organizationId);
+  async findByOrganization(organizationId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      where: { organization: { id: organizationId } },
+      skip: (paginationDto.page - 1) * paginationDto.limit,
+      take: paginationDto.limit,
+      relations: ['user', 'payments'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      items,
+      meta: {
+        total,
+        page: paginationDto.page,
+        lastPage: Math.ceil(total / paginationDto.limit),
+      },
+    };
   }
 
   async findExpiringSubscriptions(endDate: Date): Promise<Subscription[]> {
@@ -59,6 +118,16 @@ export class SubscriptionsService {
   async updateStatus(id: string, status: SubscriptionStatus): Promise<void> {
     const subscription = await this.findOne(id);
     await this.subscriptionRepository.update(id, { status });
+
+    if (status === SubscriptionStatus.ACTIVE) {
+      await this.notificationsService.createNotification(
+        subscription.user,
+        NotificationType.SUBSCRIPTION_ACTIVATED,
+        'Subscription Activated',
+        `Your subscription to ${subscription.organization.name} is now active.`,
+        true
+      );
+    }
   }
 
   async toggleAutoRenew(id: string): Promise<Subscription> {
@@ -73,5 +142,32 @@ export class SubscriptionsService {
     newEndDate.setMonth(newEndDate.getMonth() + months);
     subscription.endDate = newEndDate;
     return this.subscriptionRepository.save(subscription);
+  }
+
+  async cancel(id: string, cancelDto: CancelSubscriptionDto): Promise<Subscription> {
+    const subscription = await this.findOne(id);
+
+    if (cancelDto.immediate) {
+      subscription.status = SubscriptionStatus.CANCELLED;
+      subscription.endDate = new Date();
+    } else {
+      subscription.autoRenew = false;
+    }
+
+    if (cancelDto.reason) {
+      subscription['cancellationReason'] = cancelDto.reason;
+    }
+
+    const updatedSubscription = await this.subscriptionRepository.save(subscription);
+
+    await this.notificationsService.createNotification(
+      subscription.user,
+      NotificationType.SUBSCRIPTION_CANCELLED,
+      'Subscription Cancelled',
+      `Your subscription to ${subscription.organization.name} has been cancelled.`,
+      true
+    );
+
+    return updatedSubscription;
   }
 }

@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { SubscriptionStatus } from 'src/entities/subscription.entity';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PaginatedResponse, PaginationDto } from '../../common/dtos/pagination.dto';
+import { NotificationType } from '../../entities/notification.entity';
 import { Payment, PaymentStatus } from '../../entities/payment.entity';
+import { SubscriptionStatus } from '../../entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ProcessPaymentDto } from './dto/process-payment.dto';
@@ -13,10 +16,15 @@ export class PaymentsService {
     private readonly paymentRepository: PaymentRepository,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly paymentProcessorService: PaymentProcessorService,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
     const subscription = await this.subscriptionsService.findOne(createPaymentDto.subscriptionId);
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
 
     return this.paymentRepository.createPayment({
       subscription,
@@ -27,35 +35,71 @@ export class PaymentsService {
   }
 
   async processPayment(processPaymentDto: ProcessPaymentDto): Promise<Payment> {
-    const payment = await this.create({
-      subscriptionId: processPaymentDto.subscriptionId,
-      amount: processPaymentDto.amount,
-      method: processPaymentDto.method,
-    });
+    try {
+      const payment = await this.create({
+        subscriptionId: processPaymentDto.subscriptionId,
+        amount: processPaymentDto.amount,
+        method: processPaymentDto.method,
+      });
 
-    const gateway = this.paymentProcessorService.getPaymentGateway(processPaymentDto.method);
-    const result = await gateway.processPayment(
-      processPaymentDto.amount,
-      processPaymentDto.currency,
-      processPaymentDto.metadata,
-    );
+      const gateway = this.paymentProcessorService.getPaymentGateway(processPaymentDto.method);
+      const result = await gateway.processPayment(
+        processPaymentDto.amount,
+        processPaymentDto.currency,
+        processPaymentDto.metadata,
+      );
 
-    if (result.success) {
-      await this.updateStatus(payment.id, PaymentStatus.COMPLETED);
-      payment.status = PaymentStatus.COMPLETED;
-      payment.transactionId = result.transactionId;
-      payment.paymentDetails = result.metadata;
-      await this.subscriptionsService.updateStatus(payment.subscription.id, SubscriptionStatus.ACTIVE);
-    } else {
-      await this.updateStatus(payment.id, PaymentStatus.FAILED);
-      payment.status = PaymentStatus.FAILED;
+      if (result.success) {
+        await this.updateStatus(payment.id, PaymentStatus.COMPLETED);
+        payment.status = PaymentStatus.COMPLETED;
+        payment.transactionId = result.transactionId;
+        payment.paymentDetails = result.metadata;
+        await this.subscriptionsService.updateStatus(payment.subscription.id, SubscriptionStatus.ACTIVE);
+
+        await this.notificationsService.createNotification(
+          payment.subscription.user,
+          NotificationType.PAYMENT_SUCCESS,
+          'Payment Successful',
+          `Your payment of ${payment.amount} was successful.`,
+          true
+        );
+      } else {
+        await this.updateStatus(payment.id, PaymentStatus.FAILED);
+        payment.status = PaymentStatus.FAILED;
+
+        await this.notificationsService.createNotification(
+          payment.subscription.user,
+          NotificationType.PAYMENT_FAILED,
+          'Payment Failed',
+          `Your payment of ${payment.amount} failed. Please try again.`,
+          true
+        );
+
+        throw new BadRequestException(result.error || 'Payment processing failed');
+      }
+
+      return payment;
+    } catch (error) {
+      throw new BadRequestException((error as Error).message || 'Payment processing failed');
     }
-
-    return payment;
   }
 
-  async findAll(): Promise<Payment[]> {
-    return this.paymentRepository.findAllPayments();
+  async findAll(paginationDto: PaginationDto): Promise<PaginatedResponse<Payment>> {
+    const [items, total] = await this.paymentRepository.findAndCount({
+      skip: (paginationDto.page - 1) * paginationDto.limit,
+      take: paginationDto.limit,
+      relations: ['subscription', 'subscription.user', 'subscription.organization'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      items,
+      meta: {
+        total,
+        page: paginationDto.page,
+        lastPage: Math.ceil(total / paginationDto.limit),
+      },
+    };
   }
 
   async findOne(id: string): Promise<Payment> {
@@ -66,8 +110,23 @@ export class PaymentsService {
     return payment;
   }
 
-  async findBySubscription(subscriptionId: string): Promise<Payment[]> {
-    return this.paymentRepository.findPaymentsBySubscription(subscriptionId);
+  async findBySubscription(subscriptionId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Payment>> {
+    const [items, total] = await this.paymentRepository.findAndCount({
+      where: { subscription: { id: subscriptionId } },
+      skip: (paginationDto.page - 1) * paginationDto.limit,
+      take: paginationDto.limit,
+      relations: ['subscription'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      items,
+      meta: {
+        total,
+        page: paginationDto.page,
+        lastPage: Math.ceil(total / paginationDto.limit),
+      },
+    };
   }
 
   async updateStatus(id: string, status: PaymentStatus): Promise<void> {

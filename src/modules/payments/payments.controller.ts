@@ -1,16 +1,17 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PaymentsService } from './payments.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { UserRole } from '../../entities/user.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoleGuard } from '../auth/guards/role.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../../entities/user.entity';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -23,8 +24,10 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  findAll() {
-    return this.paymentsService.findAll();
+  findAll(
+    @Query() paginationDto: PaginationDto
+  ) {
+    return this.paymentsService.findAll(paginationDto);
   }
 
   @Get(':id')
@@ -37,7 +40,10 @@ export class PaymentsController {
   @Get('subscription/:subscriptionId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  findBySubscription(@Param('subscriptionId') subscriptionId: string) {
-    return this.paymentsService.findBySubscription(subscriptionId);
+  findBySubscription(
+    @Param('subscriptionId') subscriptionId: string,
+    @Query() paginationDto: PaginationDto
+  ) {
+    return this.paymentsService.findBySubscription(subscriptionId, paginationDto);
   }
 }

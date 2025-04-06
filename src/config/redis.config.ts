@@ -12,4 +12,5 @@ export const getRedisConfig = async (
     },
     ttl: 60 * 60 * 1000, 
   }),
+  ttl: 60 * 60 * 1000, // 1 hour in milliseconds
 });
