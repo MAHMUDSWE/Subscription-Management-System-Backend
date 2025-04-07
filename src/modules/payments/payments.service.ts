@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { getPaginatedResponse, getPaginationParams } from 'src/common/utils/pagination.util';
 import { PaginatedResponse, PaginationDto } from '../../common/dtos/pagination.dto';
 import { NotificationType } from '../../entities/notification.entity';
 import { Payment, PaymentStatus } from '../../entities/payment.entity';
@@ -85,21 +86,11 @@ export class PaymentsService {
   }
 
   async findAll(paginationDto: PaginationDto): Promise<PaginatedResponse<Payment>> {
-    const [items, total] = await this.paymentRepository.findAndCount({
-      skip: (paginationDto.page - 1) * paginationDto.limit,
-      take: paginationDto.limit,
-      relations: ['subscription', 'subscription.user', 'subscription.organization'],
-      order: { createdAt: 'DESC' },
-    });
+    const { skip, take } = getPaginationParams(paginationDto.page, paginationDto.limit);
 
-    return {
-      items,
-      meta: {
-        total,
-        page: paginationDto.page,
-        lastPage: Math.ceil(total / paginationDto.limit),
-      },
-    };
+    const [items, total] = await this.paymentRepository.findPaginatedPayments(skip, take);
+
+    return getPaginatedResponse(items, total, paginationDto.page, paginationDto.limit);
   }
 
   async findOne(id: string): Promise<Payment> {
@@ -111,22 +102,11 @@ export class PaymentsService {
   }
 
   async findBySubscription(subscriptionId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Payment>> {
-    const [items, total] = await this.paymentRepository.findAndCount({
-      where: { subscription: { id: subscriptionId } },
-      skip: (paginationDto.page - 1) * paginationDto.limit,
-      take: paginationDto.limit,
-      relations: ['subscription'],
-      order: { createdAt: 'DESC' },
-    });
 
-    return {
-      items,
-      meta: {
-        total,
-        page: paginationDto.page,
-        lastPage: Math.ceil(total / paginationDto.limit),
-      },
-    };
+    const { skip, take } = getPaginationParams(paginationDto.page, paginationDto.limit);
+
+    const [items, total] = await this.paymentRepository.findPaymentsBySubscription(subscriptionId, skip, take);
+    return getPaginatedResponse(items, total, paginationDto.page, paginationDto.limit);
   }
 
   async updateStatus(id: string, status: PaymentStatus): Promise<void> {

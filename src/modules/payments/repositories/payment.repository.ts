@@ -5,7 +5,7 @@ import { Payment, PaymentStatus } from '../../../entities/payment.entity';
 
 @Injectable()
 export class PaymentRepository extends BaseRepository<Payment> {
-    constructor(private dataSource: DataSource) {
+    constructor(dataSource: DataSource) {
         super(Payment, dataSource.createEntityManager());
     }
 
@@ -14,8 +14,11 @@ export class PaymentRepository extends BaseRepository<Payment> {
         return this.save(payment);
     }
 
-    async findAllPayments(): Promise<Payment[]> {
-        return this.find({
+    async findPaginatedPayments(skip: number, take: number): Promise<[Payment[], number]> {
+        return this.findAndCount({
+            skip,
+            take,
+            order: { createdAt: 'DESC' },
             relations: ['subscription', 'subscription.user', 'subscription.organization'],
         });
     }
@@ -27,10 +30,13 @@ export class PaymentRepository extends BaseRepository<Payment> {
         });
     }
 
-    async findPaymentsBySubscription(subscriptionId: string): Promise<Payment[]> {
-        return this.find({
+    async findPaymentsBySubscription(subscriptionId: string, skip: number, take: number): Promise<[Payment[], number]> {
+        return this.findAndCount({
             where: { subscription: { id: subscriptionId } },
-            relations: ['subscription'],
+            skip,
+            take,
+            order: { createdAt: 'DESC' },
+            relations: ['subscription', 'subscription.user', 'subscription.organization'],
         });
     }
 
