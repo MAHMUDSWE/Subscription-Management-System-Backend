@@ -13,9 +13,12 @@ export class SubscriptionRepository extends Repository<Subscription> {
         return this.save(subscription);
     }
 
-    async findAllSubscriptions(): Promise<Subscription[]> {
-        return this.find({
+    async findPaginatedSubscriptions(skip: number, take: number): Promise<[Subscription[], number]> {
+        return this.findAndCount({
+            skip,
+            take,
             relations: ['user', 'organization', 'payments'],
+            order: { createdAt: 'DESC' },
         });
     }
 
@@ -26,17 +29,23 @@ export class SubscriptionRepository extends Repository<Subscription> {
         });
     }
 
-    async findSubscriptionsByUser(userId: string): Promise<Subscription[]> {
-        return this.find({
+    async findSubscriptionsByUser(userId: string, skip: number, take: number): Promise<[Subscription[], number]> {
+        return this.findAndCount({
             where: { user: { id: userId } },
+            skip,
+            take,
             relations: ['organization', 'payments'],
+            order: { createdAt: 'DESC' },
         });
     }
 
-    async findSubscriptionsByOrganization(organizationId: string): Promise<Subscription[]> {
-        return this.find({
+    async findSubscriptionsByOrganization(organizationId: string, skip: number, take: number): Promise<[Subscription[], number]> {
+        return this.findAndCount({
             where: { organization: { id: organizationId } },
+            skip,
+            take,
             relations: ['user', 'payments'],
+            order: { createdAt: 'DESC' },
         });
     }
 

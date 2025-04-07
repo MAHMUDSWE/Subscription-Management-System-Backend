@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { getPaginatedResponse, getPaginationParams } from 'src/common/utils/pagination.util';
 import { PaginatedResponse, PaginationDto } from '../../common/dtos/pagination.dto';
 import { NotificationType } from '../../entities/notification.entity';
 import { Subscription, SubscriptionStatus } from '../../entities/subscription.entity';
@@ -46,21 +47,11 @@ export class SubscriptionsService {
   }
 
   async findAll(paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
-    const [items, total] = await this.subscriptionRepository.findAndCount({
-      skip: (paginationDto.page - 1) * paginationDto.limit,
-      take: paginationDto.limit,
-      relations: ['user', 'organization', 'payments'],
-      order: { createdAt: 'DESC' },
-    });
+    const { skip, take } = getPaginationParams(paginationDto.page, paginationDto.limit);
 
-    return {
-      items,
-      meta: {
-        total,
-        page: paginationDto.page,
-        lastPage: Math.ceil(total / paginationDto.limit),
-      },
-    };
+    const [items, total] = await this.subscriptionRepository.findPaginatedSubscriptions(skip, take);
+
+    return getPaginatedResponse(items, total, paginationDto.page, paginationDto.limit);
   }
 
   async findOne(id: string): Promise<Subscription> {
@@ -74,41 +65,15 @@ export class SubscriptionsService {
   }
 
   async findByUser(userId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
-    const [items, total] = await this.subscriptionRepository.findAndCount({
-      where: { user: { id: userId } },
-      skip: (paginationDto.page - 1) * paginationDto.limit,
-      take: paginationDto.limit,
-      relations: ['organization', 'payments'],
-      order: { createdAt: 'DESC' },
-    });
-
-    return {
-      items,
-      meta: {
-        total,
-        page: paginationDto.page,
-        lastPage: Math.ceil(total / paginationDto.limit),
-      },
-    };
+    const { skip, take } = getPaginationParams(paginationDto.page, paginationDto.limit);
+    const [items, total] = await this.subscriptionRepository.findSubscriptionsByUser(userId, skip, take);
+    return getPaginatedResponse(items, total, paginationDto.page, paginationDto.limit);
   }
 
   async findByOrganization(organizationId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Subscription>> {
-    const [items, total] = await this.subscriptionRepository.findAndCount({
-      where: { organization: { id: organizationId } },
-      skip: (paginationDto.page - 1) * paginationDto.limit,
-      take: paginationDto.limit,
-      relations: ['user', 'payments'],
-      order: { createdAt: 'DESC' },
-    });
-
-    return {
-      items,
-      meta: {
-        total,
-        page: paginationDto.page,
-        lastPage: Math.ceil(total / paginationDto.limit),
-      },
-    };
+    const { skip, take } = getPaginationParams(paginationDto.page, paginationDto.limit);
+    const [items, total] = await this.subscriptionRepository.findSubscriptionsByOrganization(organizationId, skip, take);
+    return getPaginatedResponse(items, total, paginationDto.page, paginationDto.limit);
   }
 
   async findExpiringSubscriptions(endDate: Date): Promise<Subscription[]> {
