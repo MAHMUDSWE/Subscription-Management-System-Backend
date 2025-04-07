@@ -21,5 +21,6 @@ export interface PaginatedResponse<T> {
         total: number;
         page: number;
         lastPage: number;
+        perPage: number;
     };
 }

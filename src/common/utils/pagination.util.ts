@@ -8,6 +8,7 @@ export function getPaginationMeta(total: number, page: number, limit: number) {
         total,
         page,
         lastPage: Math.ceil(total / limit),
+        perPage: limit,
     };
 }
 export function getPaginatedResponse<T>(items: T[], total: number, page: number, limit: number) {
