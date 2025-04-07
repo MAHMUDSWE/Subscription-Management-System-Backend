@@ -51,12 +51,17 @@ export class NotificationsService {
     }
 
     private async sendEmail(to: string, subject: string, text: string) {
-        await this.transporter.sendMail({
-            from: this.configService.get('SMTP_FROM'),
-            to,
-            subject,
-            text,
-        });
+        try {
+            await this.transporter.sendMail({
+                from: this.configService.get('SMTP_FROM'),
+                to,
+                subject,
+                text,
+            });
+        }
+        catch (error) {
+            console.error('Error sending email:', error);
+        }
     }
 
     async getUserNotifications(userId: string) {

@@ -35,7 +35,7 @@ export class SubscriptionsService {
       autoRenew: false,
     });
 
-    await this.notificationsService.createNotification(
+    this.notificationsService.createNotification(
       user,
       NotificationType.SUBSCRIPTION_ACTIVATED,
       'Subscription Created',
