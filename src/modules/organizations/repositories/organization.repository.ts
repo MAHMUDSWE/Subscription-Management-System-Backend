@@ -13,9 +13,12 @@ export class OrganizationRepository extends Repository<Organization> {
         return this.save(organization);
     }
 
-    async findAllOrganizations(): Promise<Organization[]> {
-        return this.find({
+    async findPaginatedOrganizations(skip: number, take: number): Promise<[Organization[], number]> {
+        return this.findAndCount({
+            skip,
+            take,
             relations: ['owner', 'subscriptions'],
+            order: { createdAt: 'DESC' },
         });
     }
 
@@ -26,10 +29,13 @@ export class OrganizationRepository extends Repository<Organization> {
         });
     }
 
-    async findOrganizationsByOwner(ownerId: string): Promise<Organization[]> {
-        return this.find({
+    async findOrganizationsByOwner(ownerId: string, skip: number, take: number): Promise<[Organization[], number]> {
+        return this.findAndCount({
             where: { owner: { id: ownerId } },
             relations: ['subscriptions'],
+            skip,
+            take,
+            order: { createdAt: 'DESC' },
         });
     }
 }

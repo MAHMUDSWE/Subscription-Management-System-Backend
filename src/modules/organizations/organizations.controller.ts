@@ -1,16 +1,17 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { OrganizationsService } from './organizations.service';
-import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { UserRole } from '../../entities/user.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoleGuard } from '../auth/guards/role.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../../entities/user.entity';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { OrganizationsService } from './organizations.service';
 
 @ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(private readonly organizationsService: OrganizationsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RoleGuard)
@@ -23,8 +24,9 @@ export class OrganizationsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  findAll() {
-    return this.organizationsService.findAll();
+  @ApiResponse({ status: 200, description: 'Return all organizations.' })
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.organizationsService.findAll(paginationDto);
   }
 
   @Get(':id')
@@ -38,7 +40,10 @@ export class OrganizationsController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(UserRole.ORGANIZATION_OWNER, UserRole.ADMIN)
   @ApiBearerAuth()
-  findByOwner(@Param('ownerId') ownerId: string) {
-    return this.organizationsService.findByOwner(ownerId);
+  findByOwner(
+    @Param('ownerId') ownerId: string,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.organizationsService.findByOwner(ownerId, paginationDto);
   }
 }

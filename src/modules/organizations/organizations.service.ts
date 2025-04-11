@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PaginatedResponse, PaginationDto } from 'src/common/dtos/pagination.dto';
+import { getPaginatedResponse, getPaginationParams } from 'src/common/utils/pagination.util';
 import { Organization } from '../../entities/organization.entity';
 import { User } from '../../entities/user.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -17,8 +19,12 @@ export class OrganizationsService {
     });
   }
 
-  async findAll(): Promise<Organization[]> {
-    return this.organizationRepository.findAllOrganizations();
+  async findAll(paginationDto: PaginationDto): Promise<PaginatedResponse<Organization>> {
+    const { page, limit } = paginationDto;
+    const { skip, take } = getPaginationParams(page, limit);
+    const [items, total] = await this.organizationRepository.findPaginatedOrganizations(skip, take);
+
+    return getPaginatedResponse(items, total, page, limit);
   }
 
   async findOne(id: string): Promise<Organization> {
@@ -31,7 +37,10 @@ export class OrganizationsService {
     return organization;
   }
 
-  async findByOwner(ownerId: string): Promise<Organization[]> {
-    return this.organizationRepository.findOrganizationsByOwner(ownerId);
+  async findByOwner(ownerId: string, paginationDto: PaginationDto): Promise<PaginatedResponse<Organization>> {
+    const { page, limit } = paginationDto;
+    const { skip, take } = getPaginationParams(page, limit);
+    const [items, total] = await this.organizationRepository.findOrganizationsByOwner(ownerId, skip, take);
+    return getPaginatedResponse(items, total, page, limit);
   }
 }
