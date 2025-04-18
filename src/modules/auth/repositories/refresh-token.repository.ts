@@ -9,7 +9,7 @@ export class RefreshTokenRepository extends Repository<RefreshToken> {
         super(RefreshToken, dataSource.createEntityManager());
     }
 
-    async createRefreshToken(user: User, token: string, expiresIn: number): Promise<RefreshToken> {
+    async createRefreshToken(user: Omit<User, 'password'>, token: string, expiresIn: number): Promise<RefreshToken> {
         const refreshToken = this.create({
             user,
             token,
