@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
+import { CookieService } from './services/cookie.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -19,13 +20,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
-        signOptions: { expiresIn: '15m' }, // Shorter expiration for access tokens
+        signOptions: { expiresIn: '15m' },
       }),
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshTokenRepository],
+  providers: [AuthService, JwtStrategy, RefreshTokenRepository, CookieService],
   exports: [AuthService],
 })
 export class AuthModule { }

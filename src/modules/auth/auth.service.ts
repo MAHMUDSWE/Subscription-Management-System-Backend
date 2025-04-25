@@ -21,7 +21,7 @@ export class AuthService {
     this.refreshTokenExpiration = 30 * 24 * 60 * 60; // 30 days in seconds
   }
 
-  async validateUser(email: string, password: string): Promise<Omit<User, 'password'>> {
+  private async validateUser(email: string, password: string): Promise<Omit<User, 'password'>> {
     const user = await this.usersService.findByEmail(email);
 
     const isPasswordValid = user && await bcrypt.compare(password, user.password);

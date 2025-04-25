@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ApiVersionGuard } from './common/guards/api-version.guard';
@@ -12,10 +13,13 @@ async function bootstrap() {
   const logger = new Logger('Main');
 
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://yourdomain.com'],
+    origin: ['http://localhost:5173', 'https://yourdomain.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'api-version'],
+    credentials: true, // Important for cookies
   });
+
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
